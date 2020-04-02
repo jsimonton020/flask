@@ -3,7 +3,7 @@ import functools
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
-from werkzueg.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from flaskr.db import get_db
 
@@ -30,9 +30,10 @@ def register():
         if error is None:
             db.execute(
                 'INSERT INTO user (username, password) VALUES (?, ?)',
+                (username, generate_password_hash(password))
             )
             db.commit()
-            return redirection(url_for('auth.login'))
+            return redirect(url_for('auth.login'))
 
         flash(error)
 
@@ -58,7 +59,7 @@ def login():
         if error is None:
             session.clear()
             session['user_id'] = user['id']
-            return redirection(url_for('index'))
+            return redirect(url_for('index'))
 
         flash(error)
 
@@ -81,3 +82,13 @@ def load_logged_in_user():
 def logout():
     session.clear()
     return redirect(url_for('index'))
+
+
+def login_required(view):
+    @functools.wraps(view)
+    def wrapped_view(**kwargs):
+        if g.user is None:
+            return redirect(url_for('auth.login'))
+        return view(**kwargs)
+
+    return wrapped_view
